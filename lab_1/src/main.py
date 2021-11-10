@@ -1,3 +1,4 @@
+import sys
 from os import path
 
 from lab_1.src.problem import Problem
@@ -13,7 +14,7 @@ def draw_delimiter():
 
 
 if __name__ == '__main__':
-    input_data_path = f"{path.dirname(__file__)}/../input_data.yaml"
+    input_data_path = sys.argv[1]
 
     problem = Problem.from_yaml(input_data_path)
     print("Задача:")
