@@ -1,12 +1,19 @@
+import enum
 import yaml
 import pydantic
 import typing as t
+
+
+class FuncDirection(str, enum.Enum):
+    MIN = "min"
+    MAX = "max"
 
 
 class Problem(pydantic.BaseModel):
     c: t.List[float]
     A: t.List[t.List[float]]
     b: t.List[float]
+    direction: FuncDirection
 
     @classmethod
     def from_yaml(cls, filename: str) -> "Problem":
@@ -15,8 +22,27 @@ class Problem(pydantic.BaseModel):
             return Problem(
                 c=data["c"],
                 A=data["A"],
-                b=data["b"]
+                b=data["b"],
+                direction=data["dir"]
             )
+
+    def draw(self):
+        func_terms = []
+        for i, c in enumerate(self.c):
+            func_terms.append(f"{c} * x{i+1}")
+        func = " + ".join(func_terms) + f" -> {self.direction}"
+        print("Функция F:")
+        print(func)
+        system = "┌\n"
+        for i, row in enumerate(self.A):
+            row_terms = " + ".join([
+                f"{val} * x{j+1}"
+                for j, val in enumerate(row)
+            ])
+            system += "├ " + row_terms + f" = {self.b[i]}" + " ;\n"
+        system += "├ xi >= 0\n"
+        system += "└"
+        print(system)
 
     def to_canonical(self) -> "Problem":
         """
@@ -56,5 +82,6 @@ class Problem(pydantic.BaseModel):
         return Problem(
             c=canonical_c,
             A=canonical_A,
-            b=self.b
+            b=self.b,
+            direction=FuncDirection.MIN
         )
