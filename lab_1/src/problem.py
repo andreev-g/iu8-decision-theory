@@ -1,6 +1,7 @@
 import enum
 import yaml
 import pydantic
+import numpy as np
 import typing as t
 
 
@@ -25,6 +26,14 @@ class Problem(pydantic.BaseModel):
                 b=data["b"],
                 direction=data["dir"]
             )
+
+    def to_dual_problem(self) -> "Problem":
+        return Problem(
+            c=self.b,
+            A=np.array(self.A).T.tolist(),
+            b=self.c,
+            direction=FuncDirection.MIN if self.direction == FuncDirection.MAX else FuncDirection.MAX
+        )
 
     def draw(self):
         func_terms = []
