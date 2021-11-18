@@ -43,24 +43,40 @@ class SimplexTable(pd.DataFrame):
             copy=True
         )
 
-    def find_base_solution(self, inplace: bool = False) -> 'SimplexTable':
+    def find_base_solution(
+            self,
+            inplace: bool = False,
+            print_logs: bool = False
+    ) -> 'SimplexTable':
         simplex: SimplexTable = self._get_self(make_copy=not inplace)
         while True:
-            if simplex._is_base_solution():
+            if simplex.is_base_solution():
                 break
             row, col = simplex._get_base_pivot_indices()
             simplex._swap_vars(row, col)
+            if print_logs:
+                print()
+                print("~" * 70 + "\n")
+                print(f"Разрешающие (строка, столбец) : ({row} , {col})")
+                simplex.print()
         return simplex
 
-    def find_optimal_solution(self, inplace: bool = False) -> 'SimplexTable':
+    def find_optimal_solution(
+            self,
+            inplace: bool = False,
+            print_logs: bool = False
+    ) -> 'SimplexTable':
         simplex = self._get_self(make_copy=not inplace)
         while True:
             if simplex._is_optimal_solution():
                 break
             row, col = simplex._get_opti_pivot_indices()
             simplex._swap_vars(row, col)
-            print(row, col)
-            simplex.print()
+            if print_logs:
+                print(f"Разрешающие (строка, столбец) : ({row} , {col})")
+                simplex.print()
+                print()
+                print("~" * 70 + "\n")
         return simplex
 
     def print(self) -> None:
@@ -96,7 +112,7 @@ class SimplexTable(pd.DataFrame):
         if name in (self._F, self._Si0):
             raise ValueError(f"Not allowed to access {loc} value: {name}")
 
-    def _is_base_solution(self) -> bool:
+    def is_base_solution(self) -> bool:
         for row in self.index.copy().drop(self._F):
             if self.loc[row, self._Si0] < 0:
                 assert any(self.loc[row].iloc[1:] < 0), self.NO_SOLUTIONS_ERR_MSG
@@ -130,6 +146,15 @@ class SimplexTable(pd.DataFrame):
         )
         row = si0_col_ratios.idxmin()
         return row, col
+
+    def check_solution(self) -> None:
+        pass
+
+    def get_solution(self) -> t.Iterable[float]:
+        return [
+            0 if f"x{i}" not in self.index else self.loc[f"x{i}", self._Si0]
+            for i in range(1, len(self))
+        ]
 
     def _get_self(self, make_copy: bool) -> 'SimplexTable':
         if make_copy:
