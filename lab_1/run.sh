@@ -1,5 +1,9 @@
 #!/bin/bash
 
-. venv/bin/activate
+PROJ_ROOT="$(dirname "$0")/.."
 
-python -m lab_1.src.main "lab_1/input_data.yaml" "$1"
+( \
+  cd "$PROJ_ROOT" || return; \
+  . venv/bin/activate; \
+  python -m lab_1.main "lab_1/input_data.yaml" "$1" \
+)

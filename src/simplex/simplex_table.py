@@ -1,6 +1,9 @@
 import typing as t
+import numpy as np
 import pandas as pd
 from tabulate import tabulate
+
+from src.simplex.simplex_problem import FuncTarget
 
 
 class SimplexTable(pd.DataFrame):
@@ -16,8 +19,8 @@ class SimplexTable(pd.DataFrame):
 
     def __init__(
             self,
-            canonical_start_table: t.List[t.List[float]],
-            target: str
+            canonical_start_table: np.ndarray,
+            target: FuncTarget
     ):
         if target not in ("min", "max"):
             raise ValueError("system's target should be one of: (min, max)")
@@ -42,15 +45,20 @@ class SimplexTable(pd.DataFrame):
 
     def find_base_solution(self, inplace: bool = False) -> 'SimplexTable':
         simplex: SimplexTable = self._get_self(make_copy=not inplace)
-        while not simplex._is_base_solution():
-            row, col = simplex._get_pivot_indices(start_row=None)
+        while True:
+            if simplex._is_base_solution():
+                break
+            row, col = simplex._get_base_pivot_indices()
             simplex._swap_vars(row, col)
         return simplex
 
     def find_optimal_solution(self, inplace: bool = False) -> 'SimplexTable':
         simplex = self._get_self(make_copy=not inplace)
-        while not simplex._is_optimal_solution():
-            row, col = simplex._get_pivot_indices(start_row=self._F)
+        while True:
+            if simplex._is_optimal_solution():
+                break
+            row, col = simplex._get_opti_pivot_indices()
+            print(row, col)
             simplex._swap_vars(row, col)
             simplex.print()
             import time
@@ -91,24 +99,38 @@ class SimplexTable(pd.DataFrame):
             raise ValueError(f"Not allowed to access {loc} value: {name}")
 
     def _is_base_solution(self) -> bool:
-        for row in self.index.copy().drop("F"):
+        for row in self.index.copy().drop(self._F):
             if self.loc[row, self._Si0] < 0:
                 assert any(self.loc[row].iloc[1:] < 0), self.NO_SOLUTIONS_ERR_MSG
                 return False
         return True
 
     def _is_optimal_solution(self) -> bool:
-        if self._target == "min":
-            return all(self.loc[self._F].drop(self._Si0) < 0)
-        return all(self.loc[self._F].drop(self._Si0) > 0)
+        if self._target == FuncTarget.MIN:
+            return all(self.loc[self._F].drop(self._Si0) > 0)
+        return all(self.loc[self._F].drop(self._Si0) < 0)
 
-    def _get_pivot_indices(self, start_row: t.Optional[str]) -> t.Tuple[str, str]:
-        if start_row is None:
-            start_row = self.loc[:, self._Si0].idxmin()
+    def _get_base_pivot_indices(self) -> t.Tuple[str, str]:
+        start_row = self.loc[:, self._Si0].drop(self._F).idxmin()
         start_row_xi = self.loc[start_row].drop(self._Si0)
         assert any(start_row_xi < 0), self.NO_SOLUTIONS_ERR_MSG
         col = start_row_xi.idxmin()
-        row = (self.loc[:, self._Si0].drop("F") / self.loc[:, col].drop("F")).idxmin()
+        row = (self.loc[:, self._Si0].drop(self._F) / self.loc[:, col].drop(self._F)).idxmin()
+        return row, col
+
+    def _get_opti_pivot_indices(self) -> t.Tuple[str, str]:
+        col = None
+        for col_name, f in self.loc[self._F, :].drop(self._Si0).items():
+            if (f > 0 and self._target == FuncTarget.MIN) or (f < 0 and self._target == FuncTarget.MAX):
+                col = col_name
+                break
+        assert col is not None, "There are not positives in F"
+        si0_col_ratios = self.loc[:, self._Si0].drop(self._F) / self.loc[:, col].drop(self._F)
+        si0_col_ratios.drop(
+            labels=[label for label, value in si0_col_ratios.items() if value < 0],
+            inplace=True
+        )
+        row = (self.loc[:, self._Si0].drop(self._F) / self.loc[:, col].drop(self._F)).idxmin()
         return row, col
 
     def _get_self(self, make_copy: bool) -> 'SimplexTable':
