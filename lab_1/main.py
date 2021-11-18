@@ -1,23 +1,17 @@
 import sys
-
 import numpy as np
 
 from src.simplex import (
     SimplexTable,
     SimplexProblem
 )
+from src.simplex.simplex_problem import FuncTarget
 
 
 def main():
     p = SimplexProblem.from_yaml(sys.argv[1])
     p.to_canonical()
     matrix = p.get_matrix()
-    matrix = np.array([
-        [2,  1,  -2],
-        [-2, -2,  1],
-        [5,  1,   1],
-        [0,  1,  -1],
-    ])
     simplex = SimplexTable(
         canonical_start_table=matrix,
         target=p.target

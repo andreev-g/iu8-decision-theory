@@ -58,11 +58,9 @@ class SimplexTable(pd.DataFrame):
             if simplex._is_optimal_solution():
                 break
             row, col = simplex._get_opti_pivot_indices()
-            print(row, col)
             simplex._swap_vars(row, col)
+            print(row, col)
             simplex.print()
-            import time
-            time.sleep(1)
         return simplex
 
     def print(self) -> None:
@@ -107,8 +105,8 @@ class SimplexTable(pd.DataFrame):
 
     def _is_optimal_solution(self) -> bool:
         if self._target == FuncTarget.MIN:
-            return all(self.loc[self._F].drop(self._Si0) > 0)
-        return all(self.loc[self._F].drop(self._Si0) < 0)
+            return all(self.loc[self._F].drop(self._Si0) < 0)
+        return all(self.loc[self._F].drop(self._Si0) > 0)
 
     def _get_base_pivot_indices(self) -> t.Tuple[str, str]:
         start_row = self.loc[:, self._Si0].drop(self._F).idxmin()
@@ -130,7 +128,7 @@ class SimplexTable(pd.DataFrame):
             labels=[label for label, value in si0_col_ratios.items() if value < 0],
             inplace=True
         )
-        row = (self.loc[:, self._Si0].drop(self._F) / self.loc[:, col].drop(self._F)).idxmin()
+        row = si0_col_ratios.idxmin()
         return row, col
 
     def _get_self(self, make_copy: bool) -> 'SimplexTable':
