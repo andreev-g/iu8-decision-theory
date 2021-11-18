@@ -43,15 +43,14 @@ class SimplexTable(pd.DataFrame):
     def find_base_solution(self, inplace: bool = False) -> 'SimplexTable':
         simplex: SimplexTable = self._get_self(make_copy=not inplace)
         while not simplex._is_base_solution():
-            row, col = simplex._get_pivot_indices(start_row=None, check_solution_existing=True)
+            row, col = simplex._get_pivot_indices(start_row=None)
             simplex._swap_vars(row, col)
         return simplex
 
     def find_optimal_solution(self, inplace: bool = False) -> 'SimplexTable':
         simplex = self._get_self(make_copy=not inplace)
         while not simplex._is_optimal_solution():
-            row, col = simplex._get_pivot_indices(start_row=self._F, check_solution_existing=False)
-            print(row, col)
+            row, col = simplex._get_pivot_indices(start_row=self._F)
             simplex._swap_vars(row, col)
             simplex.print()
             import time
@@ -103,7 +102,7 @@ class SimplexTable(pd.DataFrame):
             return all(self.loc[self._F].drop(self._Si0) < 0)
         return all(self.loc[self._F].drop(self._Si0) > 0)
 
-    def _get_pivot_indices(self, start_row: t.Optional[str], check_solution_existing: bool) -> t.Tuple[str, str]:
+    def _get_pivot_indices(self, start_row: t.Optional[str]) -> t.Tuple[str, str]:
         if start_row is None:
             start_row = self.loc[:, self._Si0].idxmin()
         start_row_xi = self.loc[start_row].drop(self._Si0)
