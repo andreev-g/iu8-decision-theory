@@ -13,8 +13,10 @@ from src.utility import (
 def main():
     simplex = get_simplex(sys.argv[1])
     print_great_separator()
+
     demonstrate_base_solution(simplex)
     print_great_separator()
+
     demonstrate_optimal_solution(simplex)
     print_great_separator()
 
