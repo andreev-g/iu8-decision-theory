@@ -40,9 +40,6 @@ class SimplexProblem(pydantic.BaseModel):
             assert len(p.c) == len(p.A) == len(p.b) == len(p.comp_signs), "all list should be same length"
             return p
 
-    def to_canonical(self) -> None:
-        pass
-
     def get_matrix(self) -> np.ndarray:
         matrix = np.c_[self.b, self.A]
         matrix = np.r_[matrix, [[0, *self.c]]]

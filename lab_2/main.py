@@ -2,6 +2,7 @@ import sys
 
 from src.simplex import (
     SimplexTable,
+    SimplexProblem,
     demonstrate_base_solution,
     demonstrate_optimal_solution
 )
@@ -11,12 +12,15 @@ from src.utility import (
 )
 
 
-def make_dual_simplex(simplex: SimplexTable) -> SimplexTable:
-    return simplex
-
-
 def main():
-    simplex = get_simplex(sys.argv[1])
+    # simplex = get_simplex(sys.argv[1])
+    # print_great_separator()
+    # demonstrate_base_solution(simplex)
+    # print_great_separator()
+    # demonstrate_optimal_solution(simplex)
+    # print_great_separator()
+
+    simplex = get_simplex(sys.argv[2])
     print_great_separator()
     demonstrate_base_solution(simplex)
     print_great_separator()

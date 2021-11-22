@@ -11,7 +11,9 @@ def demonstrate_base_solution(simplex: SimplexTable) -> None:
 
 def demonstrate_optimal_solution(simplex: SimplexTable) -> None:
     simplex.find_optimal_solution(inplace=True, print_logs=True)
-    simplex.check_solution()
+    if not simplex.check_solution():
+        raise ValueError("Решение неверно!")
+    print("Найденное решение корректно")
     solution = simplex.get_solution()
     dict_solution = {
         f"x{i + 1}": round(value, 3)

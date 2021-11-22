@@ -16,15 +16,18 @@ class SimplexTable(pd.DataFrame):
     NO_SOLUTIONS_ERR_MSG = "there aren't solutions"
 
     _target: str = None
+    _c: t.List[float] = None
 
     def __init__(
             self,
             canonical_start_table: np.ndarray,
-            target: FuncTarget
+            target: FuncTarget,
+            c: t.List[float]
     ):
         if target not in ("min", "max"):
             raise ValueError("system's target should be one of: (min, max)")
         self._target = target
+        self._c = c
         minor_vars_num = len(canonical_start_table[0]) - 1
         basis_vars_num = len(canonical_start_table) - 1
         columns = [self._Si0] + [
@@ -147,10 +150,16 @@ class SimplexTable(pd.DataFrame):
         row = si0_col_ratios.idxmin()
         return row, col
 
-    def check_solution(self) -> None:
-        pass
+    def check_solution(self) -> bool:
+        solution = self.get_solution()
+        simplex_f = - round(self.loc[self._F, self._Si0], 3)
+        calculated_f = round(sum(solution[i] * self._c[i] for i in range(len(self._c))), 3)
+        print(" + ".join(
+            f"{round(solution[i], 3)} * {round(self._c[i], 3)}" for i in range(len(self._c))
+        ) + f" == {simplex_f}")
+        return simplex_f == calculated_f
 
-    def get_solution(self) -> t.Iterable[float]:
+    def get_solution(self) -> t.List[float]:
         return [
             0 if f"x{i}" not in self.index else self.loc[f"x{i}", self._Si0]
             for i in range(1, len(self))

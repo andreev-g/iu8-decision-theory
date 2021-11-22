@@ -9,11 +9,11 @@ def print_great_separator() -> None:
 
 def get_simplex(config_filename) -> SimplexTable:
     p = SimplexProblem.from_yaml(config_filename)
-    p.to_canonical()
     matrix = p.get_matrix()
     simplex = SimplexTable(
         canonical_start_table=matrix,
-        target=p.target
+        target=p.target,
+        c=p.c
     )
     print((" " * 9) + "Исходная таблица")
     simplex.print()
