@@ -13,7 +13,9 @@ def main():
 
     problem = SimplexProblem.from_yaml(sys.argv[1])
     simplex = SimplexTable(problem)
+    print("Исходная таблица\n")
     simplex.print()
+    print_great_separator()
 
     demonstrate_base_solution(simplex)
     print_great_separator()
