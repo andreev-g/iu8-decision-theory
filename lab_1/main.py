@@ -4,15 +4,16 @@ from src.simplex import (
     demonstrate_base_solution,
     demonstrate_optimal_solution
 )
-from src.utility import (
-    get_simplex,
-    print_great_separator
-)
+from src.utility import print_great_separator
+from src.simplex.simplex_table import SimplexTable
+from src.simplex.simplex_problem import SimplexProblem
 
 
 def main():
-    simplex = get_simplex(sys.argv[1])
-    print_great_separator()
+
+    problem = SimplexProblem.from_yaml(sys.argv[1])
+    simplex = SimplexTable(problem)
+    simplex.print()
 
     demonstrate_base_solution(simplex)
     print_great_separator()

@@ -1,9 +1,12 @@
 import typing as t
-import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
-from src.simplex.simplex_problem import FuncTarget
+from src.simplex.simplex_problem import (
+    FuncTarget,
+    SimplexProblem,
+    HUMAN_COMP_SIGNS
+)
 
 
 class SimplexTable(pd.DataFrame):
@@ -15,21 +18,16 @@ class SimplexTable(pd.DataFrame):
 
     NO_SOLUTIONS_ERR_MSG = "there aren't solutions"
 
-    _target: str = None
-    _c: t.List[float] = None
+    _problem: SimplexProblem = None
 
     def __init__(
             self,
-            canonical_start_table: np.ndarray,
-            target: FuncTarget,
-            c: t.List[float]
+            problem: SimplexProblem
     ):
-        if target not in ("min", "max"):
-            raise ValueError("system's target should be one of: (min, max)")
-        self._target = target
-        self._c = c
-        minor_vars_num = len(canonical_start_table[0]) - 1
-        basis_vars_num = len(canonical_start_table) - 1
+        self._problem = problem.copy()
+        canonical_matrix = problem.get_canonical()
+        minor_vars_num = len(canonical_matrix[0]) - 1
+        basis_vars_num = len(canonical_matrix) - 1
         columns = [self._Si0] + [
             f"x{i}"
             for i in range(1, minor_vars_num + 1)
@@ -39,7 +37,7 @@ class SimplexTable(pd.DataFrame):
             for i in range(1, basis_vars_num + 1)
         ] + [self._F]
         super().__init__(
-            data=canonical_start_table,
+            data=canonical_matrix,
             index=index,
             columns=columns,
             dtype=float,
@@ -83,7 +81,13 @@ class SimplexTable(pd.DataFrame):
         return simplex
 
     def print(self) -> None:
-        print(tabulate(self, headers="keys", tablefmt="psql"))
+        print(
+            tabulate(
+                self.applymap(lambda x: x if x != 0 else 0.),
+                headers="keys",
+                tablefmt="psql"
+            )
+        )
 
     def _swap_vars(self, row: str, col: str) -> None:
         self._check_swap_index(row, loc=self._ROW)
@@ -123,7 +127,7 @@ class SimplexTable(pd.DataFrame):
         return True
 
     def _is_optimal_solution(self) -> bool:
-        if self._target == FuncTarget.MIN:
+        if self._problem.target == FuncTarget.MIN:
             return all(self.loc[self._F].drop(self._Si0) < 0)
         return all(self.loc[self._F].drop(self._Si0) > 0)
 
@@ -138,25 +142,31 @@ class SimplexTable(pd.DataFrame):
     def _get_opti_pivot_indices(self) -> t.Tuple[str, str]:
         col = None
         for col_name, f in self.loc[self._F, :].drop(self._Si0).items():
-            if (f > 0 and self._target == FuncTarget.MIN) or (f < 0 and self._target == FuncTarget.MAX):
+            if (f > 0 and self._problem.target == FuncTarget.MIN) or (f < 0 and self._problem.target == FuncTarget.MAX):
                 col = col_name
                 break
-        assert col is not None, "There are not positives in F"
+        assert col is not None, "There are not valid values in F"
         si0_col_ratios = self.loc[:, self._Si0].drop(self._F) / self.loc[:, col].drop(self._F)
         si0_col_ratios.drop(
             labels=[label for label, value in si0_col_ratios.items() if value < 0],
             inplace=True
         )
         row = si0_col_ratios.idxmin()
+        print(row, col)
         return row, col
 
     def check_solution(self) -> bool:
         solution = self.get_solution()
-        simplex_f = - round(self.loc[self._F, self._Si0], 3)
-        calculated_f = round(sum(solution[i] * self._c[i] for i in range(len(self._c))), 3)
-        print(" + ".join(
-            f"{round(solution[i], 3)} * {round(self._c[i], 3)}" for i in range(len(self._c))
+        simplex_f = round(self.loc[self._F, self._Si0], 3)
+        calculated_f = round(sum(solution[i] * self._problem.c[i] for i in range(len(self._problem.c))), 3)
+        print("F: " + " + ".join(
+            f"{round(solution[i], 3)} * {round(self._problem.c[i], 3)}" for i in range(len(self._problem.c))
         ) + f" == {simplex_f}")
+        for i, row in enumerate(self._problem.A):
+            comp_sign = HUMAN_COMP_SIGNS[self._problem.comp_signs[i]]
+            print(f"Условие {i + 1}: " + " + ".join(
+                f"{round(solution[j], 3)} * {round(a)}" for j, a in enumerate(row)
+            ) + f" == {round(sum(solution[j] * a for j, a in enumerate(row)), 3)} {comp_sign} {self._problem.b[i]}")
         return simplex_f == calculated_f
 
     def get_solution(self) -> t.List[float]:
