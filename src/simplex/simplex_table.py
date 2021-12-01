@@ -53,7 +53,7 @@ class SimplexTable(pd.DataFrame):
         while True:
             if simplex.is_base_solution():
                 break
-            row, col = simplex._get_base_pivot_indices()
+            row, col = simplex._get_pivot_indices()
             simplex._swap_vars(row, col)
             if print_logs:
                 print()
@@ -71,7 +71,7 @@ class SimplexTable(pd.DataFrame):
         while True:
             if simplex._is_optimal_solution():
                 break
-            row, col = simplex._get_opti_pivot_indices()
+            row, col = simplex._get_pivot_indices(start_row=self._F)
             simplex._swap_vars(row, col)
             if print_logs:
                 print(f"Разрешающие (строка, столбец) : ({row} , {col})")
@@ -128,31 +128,37 @@ class SimplexTable(pd.DataFrame):
 
     def _is_optimal_solution(self) -> bool:
         if self._problem.target == FuncTarget.MIN:
-            return all(self.loc[self._F].drop(self._Si0) < 0)
-        return all(self.loc[self._F].drop(self._Si0) > 0)
+            return all(self.loc[self._F] < 0)
+        return all(self.loc[self._F] > 0)
 
-    def _get_base_pivot_indices(self) -> t.Tuple[str, str]:
-        start_row = self.loc[:, self._Si0].drop(self._F).idxmin()
-        start_row_xi = self.loc[start_row].drop(self._Si0)
-        assert any(start_row_xi < 0), self.NO_SOLUTIONS_ERR_MSG
-        col = start_row_xi.idxmin()
-        row = (self.loc[:, self._Si0].drop(self._F) / self.loc[:, col].drop(self._F)).idxmin()
-        return row, col
+    def _get_pivot_indices(self, start_row: str = None) -> t.Tuple[str, str]:
+        if not start_row:
+            for st_row in self.index:
+                if self.loc[st_row, self._Si0] < 0:
+                    start_row = st_row
+                    break
 
-    def _get_opti_pivot_indices(self) -> t.Tuple[str, str]:
-        col = None
-        for col_name, f in self.loc[self._F, :].drop(self._Si0).items():
-            if (f > 0 and self._problem.target == FuncTarget.MIN) or (f < 0 and self._problem.target == FuncTarget.MAX):
-                col = col_name
-                break
-        assert col is not None, "There are not valid values in F"
-        si0_col_ratios = self.loc[:, self._Si0].drop(self._F) / self.loc[:, col].drop(self._F)
-        si0_col_ratios.drop(
-            labels=[label for label, value in si0_col_ratios.items() if value < 0],
-            inplace=True
-        )
-        row = si0_col_ratios.idxmin()
-        print(row, col)
+        if self._problem.target == FuncTarget.MIN:
+            col = self.loc[start_row].drop(self._Si0).idxmax()
+            if self.loc[start_row, col] < 0:
+                raise ValueError
+
+        else:
+            col = self.loc[start_row].drop(self._Si0).idxmin()
+            if self.loc[start_row, col] > 0:
+                raise ValueError
+
+        row = None
+        row_value = None
+        for row_name in self.index.drop(self._F):
+            if self.loc[row_name, self._Si0] != 0 and self.loc[row_name, col] != 0:
+                calc_value = self.loc[row_name, self._Si0] / self.loc[row_name, col]
+                if row is None or calc_value < row_value:
+                    row = row_name
+                    row_value = calc_value
+        if row is None:
+            raise ValueError
+
         return row, col
 
     def check_solution(self) -> bool:

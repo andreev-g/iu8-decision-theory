@@ -10,8 +10,8 @@ b:
   - 4
   - 6
   - 2
-comparison_signs:
+comp_signs:
   - "le"
   - "le"
   - "le"
-dir: "min"
+target: "max"
