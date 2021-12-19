@@ -2,7 +2,7 @@ import typing as t
 import pandas as pd
 from tabulate import tabulate
 
-from src.simplex.simplex_problem import (
+from lab_1.src.simplex.simplex_problem import (
     FuncTarget,
     SimplexProblem,
     HUMAN_COMP_SIGNS

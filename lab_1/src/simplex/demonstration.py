@@ -1,4 +1,4 @@
-from src.simplex.simplex_table import SimplexTable
+from lab_1.src.simplex.simplex_table import SimplexTable
 
 
 def demonstrate_base_solution(simplex: SimplexTable) -> None:
