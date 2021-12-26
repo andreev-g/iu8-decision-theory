@@ -2,7 +2,7 @@ import typing as t
 import pandas as pd
 from tabulate import tabulate
 
-from lab_1.src.simplex.simplex_problem import (
+from lab_1_2.src.simplex.simplex_problem import (
     FuncTarget,
     SimplexProblem,
     HUMAN_COMP_SIGNS
@@ -51,9 +51,9 @@ class SimplexTable(pd.DataFrame):
     ) -> 'SimplexTable':
         simplex: SimplexTable = self._get_self(make_copy=not inplace)
         while True:
-            if simplex.is_base_solution():
+            if simplex._is_base_solution():
                 break
-            row, col = simplex._get_pivot_indices()
+            row, col = simplex._get_base_indices()
             simplex._swap_vars(row, col)
             if print_logs:
                 print()
@@ -71,7 +71,7 @@ class SimplexTable(pd.DataFrame):
         while True:
             if simplex._is_optimal_solution():
                 break
-            row, col = simplex._get_pivot_indices(start_row=self._F)
+            row, col = simplex._get_optimal_indices()
             simplex._swap_vars(row, col)
             if print_logs:
                 print(f"Разрешающие (строка, столбец) : ({row} , {col})")
@@ -119,45 +119,54 @@ class SimplexTable(pd.DataFrame):
         if name in (self._F, self._Si0):
             raise ValueError(f"Not allowed to access {loc} value: {name}")
 
-    def is_base_solution(self) -> bool:
-        for row in self.index.copy().drop(self._F):
-            if self.loc[row, self._Si0] < 0:
-                assert any(self.loc[row].iloc[1:] < 0), self.NO_SOLUTIONS_ERR_MSG
-                return False
-        return True
+    def _is_base_solution(self) -> bool:
+        return all(self.loc[:, self._Si0].drop(self._F) >= 0)
 
     def _is_optimal_solution(self) -> bool:
-        if self._problem.target == FuncTarget.MIN:
-            return all(self.loc[self._F] < 0)
-        return all(self.loc[self._F] > 0)
+        return all(self.loc[self._F].drop(self._Si0) <= 0)
 
-    def _get_pivot_indices(self, start_row: str = None) -> t.Tuple[str, str]:
-        if not start_row:
-            for st_row in self.index:
-                if self.loc[st_row, self._Si0] < 0:
-                    start_row = st_row
-                    break
+    def _get_base_indices(self):
+        col = None
+        for basis_x in self.index.drop(self._F):
+            if self.loc[basis_x, self._Si0] >= 0:
+                continue
+            for free_x in self.columns.drop(self._Si0):
+                if self.loc[basis_x, free_x] < 0:
+                    col = free_x
 
-        if self._problem.target == FuncTarget.MIN:
-            col = self.loc[start_row].drop(self._Si0).idxmax()
-            if self.loc[start_row, col] < 0:
-                raise ValueError
-
-        else:
-            col = self.loc[start_row].drop(self._Si0).idxmin()
-            if self.loc[start_row, col] > 0:
-                raise ValueError
+            if not col:
+                raise ValueError("No solutions!")
 
         row = None
-        row_value = None
-        for row_name in self.index.drop(self._F):
-            if self.loc[row_name, self._Si0] != 0 and self.loc[row_name, col] != 0:
-                calc_value = self.loc[row_name, self._Si0] / self.loc[row_name, col]
-                if row is None or calc_value < row_value:
-                    row = row_name
-                    row_value = calc_value
-        if row is None:
-            raise ValueError
+        min_div = None
+        for basis_x in self.index.drop(self._F):
+            if self.loc[basis_x, col] == 0:
+                continue
+            div = self.loc[basis_x, self._Si0] / self.loc[basis_x, col]
+            if div > 0 and (min_div is None or div < min_div):
+                min_div = div
+                row = basis_x
+
+        if not (row and col):
+            raise ValueError("No solutions!")
+
+        return row, col
+
+    def _get_optimal_indices(self) -> t.Tuple[str, str]:
+        col = None
+        for free_x in self.columns.drop(self._Si0):
+            if self.loc[self._F, free_x] > 0:
+                col = free_x
+
+        row = None
+        min_div = None
+        for basis_x in self.index.drop(self._F):
+            if self.loc[basis_x, col] == 0:
+                continue
+            div = self.loc[basis_x, self._Si0] / self.loc[basis_x, col]
+            if div > 0 and (min_div is None or div < min_div):
+                min_div = div
+                row = basis_x
 
         return row, col
 

@@ -50,32 +50,21 @@ class SimplexProblem(pydantic.BaseModel):
                     -1 * item
                     for item in row
                 ]
-            elif self.comp_signs[i] == ComparisonSign.GE:
-                pass
-            else:
-                raise ValueError("Logic for this sign is not implemented")
         for i in range(len(self.b)):
             if self.comp_signs[i] == ComparisonSign.GE:
                 self.b[i] *= -1
-            elif self.comp_signs[i] == ComparisonSign.LE:
-                pass
-            else:
-                raise ValueError("Logic for this sign is not implemented")
+
         if self.target == FuncTarget.MAX:
-            self.c = [
-                -1 * c
-                for c in self.c
-            ]
-        elif self.target == FuncTarget.MIN:
-            pass
-        else:
-            raise ValueError("Logic for this target is not implemented")
+            for i in range(len(self.c)):
+                self.c[i] *= -1
+
+        for i in range(len(self.c)):
+            self.c[i] *= -1
+
         for i in range(len(self.A)):
             for j in range(len(self.A[i])):
                 self.A[i][j] *= -1
-        if self.target == FuncTarget.MIN:
-            for i in range(len(self.c)):
-                self.c[i] *= -1
+
         matrix = np.c_[self.b, self.A]
         matrix = np.r_[matrix, [[0, *self.c]]]
         return matrix

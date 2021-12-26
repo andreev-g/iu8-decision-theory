@@ -1,5 +1,5 @@
-from lab_1.src.simplex.simplex_table import SimplexTable
-from lab_1.src.simplex.simplex_problem import SimplexProblem
+from lab_1_2.src.simplex.simplex_table import SimplexTable
+from lab_1_2.src.simplex.simplex_problem import SimplexProblem
 
 
 def print_great_separator() -> None:
