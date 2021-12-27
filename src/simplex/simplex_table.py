@@ -2,8 +2,7 @@ import typing as t
 import pandas as pd
 from tabulate import tabulate
 
-from lab_1_2.src.simplex.simplex_problem import (
-    FuncTarget,
+from src.simplex.simplex_problem import (
     SimplexProblem,
     HUMAN_COMP_SIGNS
 )
@@ -49,12 +48,14 @@ class SimplexTable(pd.DataFrame):
             inplace: bool = False,
             print_logs: bool = False
     ) -> 'SimplexTable':
+
         simplex: SimplexTable = self._get_self(make_copy=not inplace)
-        while True:
-            if simplex._is_base_solution():
-                break
+
+        while not simplex.is_base_solution():
+
             row, col = simplex._get_base_indices()
             simplex._swap_vars(row, col)
+
             if print_logs:
                 print()
                 print("~" * 70 + "\n")
@@ -67,12 +68,14 @@ class SimplexTable(pd.DataFrame):
             inplace: bool = False,
             print_logs: bool = False
     ) -> 'SimplexTable':
+
         simplex = self._get_self(make_copy=not inplace)
-        while True:
-            if simplex._is_optimal_solution():
-                break
+
+        while not simplex.is_optimal_solution():
+
             row, col = simplex._get_optimal_indices()
             simplex._swap_vars(row, col)
+
             if print_logs:
                 print(f"Разрешающие (строка, столбец) : ({row} , {col})")
                 simplex.print()
@@ -119,10 +122,10 @@ class SimplexTable(pd.DataFrame):
         if name in (self._F, self._Si0):
             raise ValueError(f"Not allowed to access {loc} value: {name}")
 
-    def _is_base_solution(self) -> bool:
+    def is_base_solution(self) -> bool:
         return all(self.loc[:, self._Si0].drop(self._F) >= 0)
 
-    def _is_optimal_solution(self) -> bool:
+    def is_optimal_solution(self) -> bool:
         return all(self.loc[self._F].drop(self._Si0) <= 0)
 
     def _get_base_indices(self):
