@@ -3,7 +3,7 @@ from src.simplex.simplex_problem import SimplexProblem
 
 
 def print_separator():
-    print("#" * 70)
+    print("\n" + "▣" * 70, end="\n\n")
 
 
 def print_great_separator() -> None:

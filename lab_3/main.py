@@ -1,31 +1,19 @@
-import sys
-import yaml
-import enum
 import math
-import numpy
-import pydantic
-import itertools
-import typing as t
+import numpy as np
+import pandas as pd
 
-from src.simplex.v2 import SimplexMethod
-
-
-class Problem(pydantic.BaseModel):
-    c: t.List[float]
-    A: t.List[t.List[float]]
-    b: t.List[float]
-
-    @classmethod
-    def from_yaml(cls, filename: str) -> "Problem":
-        with open(filename, "r") as f:
-            data = yaml.load(f, yaml.CLoader)
-            p = cls(**data)
-            return p
+from src.brute import BruteForce
+from src.utility import print_separator
+from src.simplex.simplex import SimplexMethod
 
 
-class SysTowarding(str, enum.Enum):
-    MIN = "min"
-    MAX = "max"
+class MinTowarding:
+    def __str__(self):
+        return 'min'
+
+class MaxTowarding:
+    def __str__(self):
+        return 'max'
 
 
 class TreeNode:
@@ -54,55 +42,56 @@ class BranchesAndBoundsMethod:
         find, idx, el = self.find_float_idx(node.value.answer[:4])
         if find:
             # Ветвление влево если найдено дробное решение
-            new_row = numpy.zeros(node.value.c.size)
+            new_row = np.zeros(node.value.c.size)
             new_row[idx] = 1
-            a = numpy.vstack((node.value.A, new_row))
-            b = numpy.append(node.value.b, el)
-            simplex = SimplexMethod(a, b, node.value.c, mode=SysTowarding.MAX)
+            a = np.vstack((node.value.A, new_row))
+            b = np.append(node.value.b, el)
+            simplex = SimplexMethod(a, b, node.value.c, mode=MaxTowarding())
             try:
-                print(f'ВЕТВЛЕНИЕ ВЛЕВО ПО ПЕРМЕННОЙ x_{idx} <= {el}')
+                print(f'Ветвимся влево по переменной x_{idx} <= {el}')
                 simplex.get_result()
             except AssertionError:
                 node.left = TreeNode('Нет\n решения', simplex)
-                print(f'в ветке x_{idx} <= {el} нет решения')
+                print(f'В ветви x_{idx} <= {el} нет решения')
                 return
             node.left = TreeNode(simplex.answer[0], simplex)
             self.branching(node.left)
             # Ветвление вправо если найдено дробное решение
-            new_row_right = numpy.zeros(node.value.c.size)
+            new_row_right = np.zeros(node.value.c.size)
             new_row_right[idx] = -1
-            a_right = numpy.vstack((node.value.A, new_row_right))
-            b_right = numpy.append(node.value.b, -(el + 1))
-            simplex = SimplexMethod(a_right, b_right, node.value.c, mode=SysTowarding.MAX)
+            a_right = np.vstack((node.value.A, new_row_right))
+            b_right = np.append(node.value.b, -(el + 1))
+            simplex = SimplexMethod(a_right, b_right, node.value.c, mode=MaxTowarding())
             try:
-                print(f'ВЕТВЛЕНИЕ ВПРАВО ПО ПЕРМЕННОЙ x_{idx} => {el+1}')
+                print(f'Ветвимся вправо по переменной x_{idx} => {el+1}')
                 simplex.get_result()
             except AssertionError:
                 node.right = TreeNode('Нет решения', simplex)
-                print(f'в ветке x_{idx} >= {el+1} нет решения')
+                print(f'В ветви x_{idx} >= {el+1} нет решения')
                 return
             node.right = TreeNode(simplex.answer[0], simplex)
             self.branching(node.right)
         if not find:
             if node.value.answer[0] == 'Нет\n решения':
                 return
-            print('Найдено целочисленное решение')
+            print('Найдено целочисленное решение:')
             self.integer_solutions.append(node)
             return
 
     def start(self):
         self.branching(self.root)
+        print_separator()
         print('Все целочисленные решения')
         for solution in self.integer_solutions:
-            print(solution.value.answer[:4])
+            print(f"F({solution.value.answer[1]}, {solution.value.answer[2]}, {solution.value.answer[3]}) = {solution.value.answer[0]}")
         self.print()
 
     def print(self):
-        lines, *_ = self._new_string_representation(self.root)
+        lines, *_ = self._make_string_representation(self.root)
         for line in lines:
             print(line)
 
-    def _new_string_representation(self, node):
+    def _make_string_representation(self, node):
         """
         Создает рекурсивное представление дерева
         """
@@ -116,7 +105,7 @@ class BranchesAndBoundsMethod:
 
         # есть только левое поддерево
         if node.right is None:
-            lines, n, p, x = self._new_string_representation(node.left)
+            lines, n, p, x = self._make_string_representation(node.left)
             s = '%s' % node.f
             u = len(s)
             first_line = (x + 1) * ' ' + (n - x - 1) * '_' + s
@@ -126,7 +115,7 @@ class BranchesAndBoundsMethod:
 
         # есть только правое поддерево
         if node.left is None:
-            lines, n, p, x = self._new_string_representation(node.right)
+            lines, n, p, x = self._make_string_representation(node.right)
             s = '%s' % node.f
             u = len(s)
             first_line = s + x * '_' + (n - x) * ' '
@@ -135,8 +124,8 @@ class BranchesAndBoundsMethod:
             return [first_line, second_line] + shifted_lines, n + u, p + 2, u // 2
 
         # есть оба поддерева
-        left, n, p, x = self._new_string_representation(node.left)
-        right, m, q, y = self._new_string_representation(node.right)
+        left, n, p, x = self._make_string_representation(node.left)
+        right, m, q, y = self._make_string_representation(node.right)
         s = '%s' % node.f
         u = len(s)
         first_line = (x + 1) * ' ' + (n - x - 1) * '_' + s + y * '_' + (m - y) * ' '
@@ -150,47 +139,26 @@ class BranchesAndBoundsMethod:
         return lines, n + m + u, max(p, q) + 2, n + u // 2
 
 
-def brute_force(a, b, c, optimal_value):
-    """
-    Функция полного перебора всех возможных целочисленных переменных
-    :param a: Уравнения системы ограничений
-    :param b: Массив ограничений
-    :param c: Функционал
-    :param optimal_value: Результат симплекс метода
-    :return: Оптимальное целочисленное решение
-    """
-    a = numpy.array(a)
-    b = numpy.array(b)
-    c = numpy.array(c)
-    solutions = {}
-    max_x = math.ceil(optimal_value / c[c > 0].min())
-
-    for combination in itertools.product(numpy.arange(max_x), repeat=c.size):
-        number_of_valid_constraints = 0
-        for i in range(b.size):
-            constraints = a[i] * combination
-            if numpy.sum(constraints) <= b[i]:
-                number_of_valid_constraints += 1
-
-        if number_of_valid_constraints == b.size:
-            result = numpy.sum(combination * c)
-            solutions[result] = combination
-            print(combination, result)
-
-    return max(solutions.keys()), solutions[max(solutions.keys())]
-
-
 if __name__ == '__main__':
-    print('МЕТОД ВЕТВЕЙ И ГРАНИЦ')
+    print('Метод ветвей и границ:')
+    print_separator()
 
-    problem = Problem.from_yaml(sys.argv[1])
+    c = [3, 3, 7]
+    A = [[1, 1, 1],
+         [1, 4, 0],
+         [0, 0.5, 3]]
+    b = [3, 5, 7]
 
-    simplex = SimplexMethod(problem.A, problem.b, problem.c, SysTowarding.MAX)
+    simplex = SimplexMethod(A, b, c, MaxTowarding())
     solution = simplex.get_result()
 
     tree = BranchesAndBoundsMethod(solution[0], simplex)
     tree.start()
 
-    # brute_solution, value = brute_force(problem.A, problem.b, problem.c, solution[0])
-    # print('ПОЛНЫЙ ПЕРЕБОР')
-    # print(f'F = {brute_solution}, x = {value}')
+    print_separator()
+    print('Полный перебор:')
+    print_separator()
+    bf = BruteForce(A, b, c, solution[0])
+    brute_solution, value = bf.brute_optimal()
+    print("Оптимальное решение полным перебором:")
+    print(f'F = {brute_solution}, x = {value}')
