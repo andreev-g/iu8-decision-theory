@@ -1,19 +1,9 @@
 import math
 import numpy as np
-import pandas as pd
 
 from src.brute import BruteForce
 from src.utility import print_separator
 from src.simplex.simplex import SimplexMethod
-
-
-class MinTowarding:
-    def __str__(self):
-        return 'min'
-
-class MaxTowarding:
-    def __str__(self):
-        return 'max'
 
 
 class TreeNode:
@@ -22,6 +12,16 @@ class TreeNode:
         self.right = None
         self.f = f
         self.value = value
+
+
+class MinTowarding:
+    def __str__(self):
+        return 'min'
+
+
+class MaxTowarding:
+    def __str__(self):
+        return 'max'
 
 
 class BranchesAndBoundsMethod:
@@ -142,6 +142,12 @@ class BranchesAndBoundsMethod:
 if __name__ == '__main__':
     print('Метод ветвей и границ:')
     print_separator()
+
+    c = [2, 8, 3]
+    A = [[2, 1, 1],
+         [1, 2, 0],
+         [0, 0.5, 1]]
+    b = [4, 6, 2]
 
     c = [3, 3, 7]
     A = [[1, 1, 1],

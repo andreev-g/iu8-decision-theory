@@ -59,7 +59,7 @@ class SimplexMethod:
         assert np.any(row < 0), f'Система не имеет решений'
         j = np.where(row < 0, row, np.inf).argmin()
         j += 1
-        base_column = self.matrix[:-1, j]
+        base_column = self.matrix[-1, j]
         with np.errstate(divide='ignore', invalid='ignore'):
             arr = first_column / base_column
             arr[arr <= 0] = np.inf
